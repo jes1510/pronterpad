@@ -78,18 +78,22 @@ class pronterPadFrame(wx.Frame):
         # end wxGlade
         
     def on_timer(self, event):
-        data = self.controller.readAxes()        
+        axesData = self.controller.readAxes()        
 
         for i in range(0, self.numAxes) :
-            out = 'Axis ' + str(i) + ': ' + str(data[i])
+            out = 'Axis ' + str(i) + ': ' + str(axesData[i])
             self.axesLabels[i].SetLabel(out)
             
-        data = self.controller.readButtons()  
+        buttonData = self.controller.readButtons()  
         for i in range(0, self.numButtons) :
-            out = 'Button ' + str(i) + ': ' + str(data[i])
-            self.buttonsLabels[i].SetLabel(out)    
+            out = 'Button ' + str(i) + ': ' + str(buttonData[i])
+            self.buttonsLabels[i].SetLabel(out)          
         
-        print com.port
+        print axesData
+        fr = int(1000 * axesData[0])
+        print fr
+        if fr > 0 :
+			com.sendGCode('X', 10, fr)
     
     
     
@@ -130,11 +134,18 @@ class Com() :
         self.port = None       
         
     def _send(self, data) :
-        port.write(data)
+        self.port.write(data)
+    
+    def _read(self) :
+		return self.port.readline()
         
-    def sendGCode(axis, steps) :
-        line = 'G91 ' + axis + ' ' + str(steps) + ' G90'
+    def sendGCode(self, axis, steps, feedRate) :
+		
+        line = 'G0 G91 F' + str(feedRate) +  ' ' + axis  + str(steps) + ' G90\n'
+       # line = 'F100 G0 G91 X10 G90'
+        print "Sending", line
         self._send(line)
+        
         
     def setCom(self, *args, **kwds) :
         self.port = kwds['port']
@@ -143,9 +154,10 @@ class Com() :
 # end of class pronterPadFrame
 if __name__ == "__main__":  
     import serial
-    ser = serial.Serial('/dev/ttyS0', 115200)  
+    ser = serial.Serial('/dev/ttyACM0', 115200, timeout=3)  
     com = Com()
     com.setCom(port=ser)  
+    com.port.flushInput()
     
     app = wx.PySimpleApp(0)
     wx.InitAllImageHandlers()
